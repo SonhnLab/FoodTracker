@@ -1,5 +1,5 @@
 //
-//  ViewController.swift
+//  MealViewController.swift
 //  FoodTracker
 //
 //  Created by Son Ho on 5/30/18.
@@ -7,14 +7,18 @@
 //
 
 import UIKit
+import os.log
 
-class ViewController: UIViewController {
+class MealViewController: UIViewController {
     
     // MARK: Properties
-    @IBOutlet weak var mealNameLabel: UILabel!
+    
     @IBOutlet weak var mealNameTextField: UITextField!
     @IBOutlet weak var photoImageView: UIImageView!
     @IBOutlet weak var ratingControl: RatingControl!
+    @IBOutlet weak var saveButton: UIBarButtonItem!
+    
+    var meal: Meal?
     
     // UIImagePickerController is a view controller that lets a user pick media from their photo library.
     let imagePickerController = UIImagePickerController()
@@ -30,19 +34,59 @@ class ViewController: UIViewController {
         
         // Make sure ViewController is notified when the user picks an image.
         imagePickerController.delegate = self
+        
+        if let meal = meal {
+            navigationItem.title = meal.name
+            mealNameTextField.text = meal.name
+            photoImageView.image = meal.photo
+            ratingControl.rating = meal.rating
+        }
+        
+        updateSaveButtonState()
     }
     
     // MARK: Actions
+    
     @IBAction func selectImageFromLibrary(_ sender: UITapGestureRecognizer) {
         // Hide the keyboard.
         mealNameTextField.resignFirstResponder()
         
         present(imagePickerController, animated: true, completion: nil)
     }
+    
+    // MARK: Navigation
+    
+    @IBAction func cancelButton(_ sender: UIBarButtonItem) {
+        navigationController?.popViewController(animated: true)
+        dismiss(animated: true, completion: nil)
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        super.prepare(for: segue, sender: sender)
+        
+        guard let button = sender as? UIBarButtonItem, button === saveButton else {
+            os_log("The save button was not pressed, cancelling", log: OSLog.default, type: .debug)
+            return
+        }
+        
+        let name = mealNameTextField.text ?? ""
+        let photo = photoImageView.image
+        let rating = ratingControl.rating
+        
+        meal = Meal(name: name, photo: photo, rating: rating)
+    }
+    
+    // MARK: Public Methods
+    
+    public func updateSaveButtonState() {
+        // Disable the Save button if the text field is empty.
+        let text = mealNameTextField.text ?? ""
+        saveButton.isEnabled = !text.isEmpty
+    }
 
 }
 
-extension ViewController: UITextFieldDelegate {
+extension MealViewController: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         // Hide the keyboard.
         textField.resignFirstResponder()
@@ -51,11 +95,12 @@ extension ViewController: UITextFieldDelegate {
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        mealNameLabel.text = textField.text
+        updateSaveButtonState()
+        navigationItem.title = textField.text
     }
 }
 
-extension ViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+extension MealViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         // Dismiss the picker.
         dismiss(animated: true, completion: nil)
